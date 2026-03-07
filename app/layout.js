@@ -18,10 +18,10 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${inter.className} bg-gray-950 text-white`}>
         <AuthProvider>
-          <Analytics/>
           <Navbar />
           {children}
           <Footer />
+          <Analytics/>
         </AuthProvider>
       </body>
     </html>
