@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata = {
   title: "Oloo's Portfolio",
   description: "Full stack developer portfolio",
+  metaBase: "https://my-portfolio-yyul.vercel.app",
 };
 
 export default function RootLayout({ children }) {
