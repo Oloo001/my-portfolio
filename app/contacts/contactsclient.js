@@ -1,13 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useForm } from "@/hooks/useForm";
+import { contactSchema } from "@/lib/validations";
+import FormField from "@/components/FormField";
 
 export default function Contacts() {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState([]);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+
+  const { values, errors, setValue, validate } = useForm(contactSchema, {
+    name: "",
+    email: "",
+    phone: "",
+  });
 
 
   // Load contacts on mount
@@ -35,21 +43,46 @@ export default function Contacts() {
   }
 
   async function addContact() {
-    if (!name || !email) return;
+  // 1. Local Validation (Stop before even trying the network)
+  if (!validate()) return;
 
+  setSubmitting(true);
+
+  try {
+    // 2. The Network Request
     const res = await fetch("/api/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, phone }),
+      body: JSON.stringify(values),
     });
 
-    if (res.ok) {
-      setName("");
-      setEmail("");
-      setPhone("");
-      fetchContacts(); // refresh list
+    // 3. Handle Server-Side Errors (e.g., 400 Bad Request, 500 Server Error)
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to save contact");
     }
+
+    // 4. Success Case
+    setValue("name", "");
+    setValue("email", "");
+    setValue("phone", "");
+    
+    // Refresh the list so the new contact appears
+    await fetchContacts(); 
+    
+    console.log("Contact added successfully!");
+
+  } catch (err) {
+    // 5. Catch Network Failures or Thrown Errors
+    console.error("Error in addContact:", err.message);
+    // Optional: setErrorMessage(err.message); 
+    alert("Error: " + err.message);
+
+  } finally {
+    // 6. Always turn off the loading state, win or lose
+    setSubmitting(false);
   }
+}
 
   async function deleteContact(id) {
     await fetch(`/api/contacts/${id}`, { method: "DELETE" });
@@ -64,29 +97,41 @@ export default function Contacts() {
       <div className="border border-gray-800 rounded-xl p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Add Contact</h2>
         <div className="flex flex-col gap-3">
-          <input
-            placeholder="Name *"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <input
-            placeholder="Email *"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <input
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
+
+          <FormField label="Name" error={errors.name}>
+            <input
+              placeholder="Ana Silva"
+              value={values.name}
+              onChange={(e) => setValue("name", e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+          </FormField>
+
+          <FormField label="Email" error={errors.email}>
+            <input
+              type="email"
+              placeholder="ana@email.com"
+              value={values.email}
+              onChange={(e) => setValue("email", e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+          </FormField>
+
+                    <FormField label="Phone (optional)" error={errors.phone}>
+            <input
+              placeholder="555-0101"
+              value={values.phone}
+              onChange={(e) => setValue("phone", e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+          </FormField>
+
           <button
             onClick={addContact}
+            disabled={submitting}
             className="bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2 transition font-medium"
           >
-            Add Contact
+            {submitting ? "Saving..." : "Add Contact"}
           </button>
         </div>
       </div>
@@ -143,7 +188,7 @@ export default function Contacts() {
     href="https://wa.me/254755112760?text=Hi%20Oloo%2C%20I%20found%20your%20contact%20on%20your%20portfolio%20website.%20I'd%20like%20to%20get%20in%20touch%20with%20you." 
     target="_blank" 
     rel="noopener noreferrer"
-    className="bg-green-600 px-4 py-2 rounded-lg text-white"
+    className="px-6 py-3 bg-green-600 px-4 py-2 rounded-lg text-white"
   >
     Chat on WhatsApp
   </a>
