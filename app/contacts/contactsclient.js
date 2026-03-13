@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "@/hooks/useForm";
 import { contactSchema } from "@/lib/validations";
 import FormField from "@/components/FormField";
+import toast from "react-hot-toast";
 
 export default function Contacts() {
   const [contacts, setContacts] = useState([]);
@@ -44,7 +45,10 @@ export default function Contacts() {
 
   async function addContact() {
   // 1. Local Validation (Stop before even trying the network)
-  if (!validate()) return;
+  if (!validate()){
+    toast.error("Please fix the errors below");
+    return;
+  } 
 
   setSubmitting(true);
 
@@ -59,7 +63,7 @@ export default function Contacts() {
     // 3. Handle Server-Side Errors (e.g., 400 Bad Request, 500 Server Error)
     if (!res.ok) {
       const errorData = await res.json();
-      throw new Error(errorData.message || "Failed to save contact");
+      throw new Error(errorData.message || toast.error("Failed to add contact"));
     }
 
     // 4. Success Case
@@ -70,13 +74,13 @@ export default function Contacts() {
     // Refresh the list so the new contact appears
     await fetchContacts(); 
     
-    console.log("Contact added successfully!");
+    toast.success(`${values.name} added!`);
+    //console.log("Contact added successfully!");
 
   } catch (err) {
     // 5. Catch Network Failures or Thrown Errors
-    console.error("Error in addContact:", err.message);
-    // Optional: setErrorMessage(err.message); 
-    alert("Error: " + err.message);
+  
+    toast.error("Error: " + err.message);
 
   } finally {
     // 6. Always turn off the loading state, win or lose
@@ -84,8 +88,16 @@ export default function Contacts() {
   }
 }
 
-  async function deleteContact(id) {
-    await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+  async function deleteContact(id, name) {
+    // Promise toast — shows loading then success/error
+  await toast.promise(
+     fetch(`/api/contacts/${id}`, { method: "DELETE" }),
+      {
+      loading: "Deleting...",
+      success: `${name} deleted`,
+      error: "Failed to delete",
+    }
+  );
     fetchContacts(); // refresh list
   }
 
@@ -173,7 +185,7 @@ export default function Contacts() {
                 )}
               </div>
               <button
-                onClick={() => deleteContact(contact.id)}
+                onClick={() => deleteContact(contact.id, contact.name)}
                 className="text-red-400 hover:text-red-300 text-sm transition"
               >
                 Delete

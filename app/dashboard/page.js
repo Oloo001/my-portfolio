@@ -3,6 +3,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
+export const metadata = {
+  title: "Dashboard - Oloo.dev",
+  description: "User dashboard with stats and recent contacts",
+  viewport: "width=device-width, initial-scale=1",
+};
+
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
 
